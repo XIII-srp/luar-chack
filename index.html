@@ -6,49 +6,43 @@
     <title>Luar Shop</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --main: #bb86fc; --bg: #121212; --card: #1e1e1e; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: white; margin: 0; padding: 20px; }
+        :root { --main: #27ae60; --bg: #121212; --card: #1e1e1e; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding: 15px; }
         
-        .header { background: linear-gradient(135deg, #3700b3, #6200ee); padding: 20px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
-        .header h1 { margin: 0; font-size: 22px; }
-        .header p { margin: 5px 0 0; opacity: 0.8; font-size: 14px; }
-
-        .nav { display: flex; gap: 10px; margin-bottom: 20px; }
-        .nav-btn { flex: 1; padding: 10px; background: var(--card); border: 1px solid #333; border-radius: 12px; color: white; font-weight: bold; text-align: center; }
-        .nav-btn.active { border-color: var(--main); color: var(--main); }
-
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .item { background: var(--card); border-radius: 20px; padding: 15px; position: relative; border: 1px solid #222; text-align: center; }
-        .item h3 { margin: 0; font-size: 18px; color: var(--main); }
-        .item .price { font-size: 20px; font-weight: 800; margin: 10px 0; display: block; }
-        .item .discount { position: absolute; top: 10px; right: 10px; background: #cf6679; color: black; font-size: 10px; padding: 2px 6px; border-radius: 5px; font-weight: bold; }
+        .header { background: #1e1e1e; padding: 20px; border-radius: 15px; border: 1px solid #333; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .item { background: var(--card); padding: 15px; border-radius: 15px; border: 1px solid #333; text-align: center; }
+        .item h3 { margin: 0; color: var(--main); }
+        .price { font-size: 20px; font-weight: bold; margin: 10px 0; display: block; }
         
-        button { background: var(--main); color: black; border: none; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:active { transform: scale(0.95); }
-
-        #profile-page { display: none; }
+        button { background: var(--main); color: white; border: none; padding: 12px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
+        
+        /* Модалка оплаты */
+        #pay-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center;
+        }
+        .modal-body { background: #252525; padding: 25px; border-radius: 20px; width: 85%; text-align: center; border: 1px solid #444; }
+        .copy-area { background: #000; padding: 12px; border-radius: 8px; margin: 15px 0; color: var(--main); font-weight: bold; }
     </style>
 </head>
 <body>
+
     <div class="header">
-        <h1 id="user-name">Загрузка...</h1>
-        <p>Курс: 1 L-coin = 1 ₽</p>
+        <h2 style="margin:0">💎 Luar Shop</h2>
+        <p style="margin:5px 0 0; opacity:0.6; font-size:14px">Курс: 1 L-coin = 1 ₽</p>
     </div>
 
-    <div class="nav">
-        <div class="nav-btn active" id="btn-shop" onclick="tab('shop')">Магазин</div>
-        <div class="nav-btn" id="btn-prof" onclick="tab('prof')">Профиль</div>
-    </div>
+    <div class="grid" id="shop-grid"></div>
 
-    <div id="shop-page">
-        <div class="grid" id="products"></div>
-    </div>
-
-    <div id="profile-page">
-        <div class="item" style="width: 100%; box-sizing: border-box;">
-            <p>Твой ID: <b id="user-id"></b></p>
-            <p>Куплено монет: <b>0 L</b></p>
-            <p>Статус: <b>Клиент</b></p>
+    <div id="pay-modal">
+        <div class="modal-body">
+            <h2 style="color:var(--main); margin-top:0">Оплата СБП</h2>
+            <p>Сумма к переводу: <b id="m-price">0</b> ₽</p>
+            <div class="copy-area">+79023916402</div>
+            <p style="font-size:13px; opacity:0.8">Банк: <b>Сбербанк</b></p>
+            <button onclick="confirmPay()">Я ОПЛАТИЛ</button>
+            <p onclick="closeModal()" style="margin-top:15px; font-size:14px; opacity:0.5">Назад</p>
         </div>
     </div>
 
@@ -56,38 +50,42 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        function tab(t) {
-            document.getElementById('shop-page').style.display = t === 'shop' ? 'block' : 'none';
-            document.getElementById('profile-page').style.display = t === 'prof' ? 'block' : 'none';
-            document.getElementById('btn-shop').classList.toggle('active', t === 'shop');
-            document.getElementById('btn-prof').classList.toggle('active', t === 'prof');
-        }
+        const goods = [10, 20, 50, 100, 500, 1000];
+        let activeOrder = null;
 
-        const items = [10, 20, 50, 100, 500, 1000];
-        const grid = document.getElementById('products');
-
-        items.forEach(amt => {
-            let disc = amt >= 1000 ? 0.15 : (amt >= 500 ? 0.10 : 0);
-            let finalPrice = Math.floor(amt * (1 - disc));
+        const grid = document.getElementById('shop-grid');
+        goods.forEach(amt => {
+            let disc = amt === 1000 ? 0.15 : (amt === 500 ? 0.10 : 0);
+            let prc = Math.floor(amt * (1 - disc));
             
             grid.innerHTML += `
                 <div class="item">
-                    ${disc > 0 ? `<div class="discount">-${disc*100}%</div>` : ''}
                     <h3>${amt} L</h3>
-                    <span class="price">${finalPrice} ₽</span>
-                    <button onclick="buy(${amt}, ${finalPrice})">Купить</button>
+                    <span class="price">${prc} ₽</span>
+                    <button onclick="openPay(${amt}, ${prc})">Купить</button>
                 </div>
             `;
         });
 
-        function buy(a, p) {
-            tg.showConfirm(`Заказать ${a} L-coins за ${p} руб?`, (ok) => {
-                if(ok) tg.sendData(JSON.stringify({ action: 'pay_sbp', amount: a, price: p }));
-            });
+        function openPay(amt, prc) {
+            activeOrder = { amount: amt, price: prc };
+            document.getElementById('m-price').innerText = prc;
+            document.getElementById('pay-modal').style.display = 'flex';
         }
 
-        document.getElementById('user-name').innerText = tg.initDataUnsafe.user?.first_name || 'Пользователь';
-        document.getElementById('user-id').innerText = tg.initDataUnsafe.user?.id || '0';
+        function closeModal() {
+            document.getElementById('pay-modal').style.display = 'none';
+        }
+
+        function confirmPay() {
+            // Отправляем данные боту
+            tg.sendData(JSON.stringify({
+                action: 'pay_sbp',
+                amount: activeOrder.amount,
+                price: activeOrder.price
+            }));
+            tg.close();
+        }
     </script>
 </body>
 </html>
