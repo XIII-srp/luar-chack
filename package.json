@@ -1,13 +1,14 @@
 {
   "name": "discord-shop-bot",
   "version": "1.0.0",
-  "description": "Telegram bot with Mini App for Discord shop",
+  "description": "Telegram bot + Web App shop with RUB balance",
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js",
     "dev": "nodemon bot.js"
   },
   "dependencies": {
+    "better-sqlite3": "^9.4.0",
     "dotenv": "^16.3.1",
     "express": "^4.22.1",
     "node-telegram-bot-api": "^0.64.0"
