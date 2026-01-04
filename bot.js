@@ -1,40 +1,111 @@
-// === НАСТРОЙКИ ===
-const BOT_TOKEN = '7417993582:AAGsZ0pS4uwu8LQU-UWhUESgHTI3DdmxYdE'; // ЗАМЕНИТЕ НА ВАШ ТОКЕН!
-const WEB_APP_URL = 'https://183300ba7e7960cf-66-23-207-66.serveousercontent.com';
-
-// === ПРОВЕРКА ===
-if (!BOT_TOKEN || BOT_TOKEN.includes('ВАШ_ТОКЕН')) {
-    console.log('\n❌ ВНИМАНИЕ: Замените ВАШ_ТОКЕН на реальный токен!');
-    console.log('📝 Получите токен:');
-    console.log('1. Откройте Telegram');
-    console.log('2. Найдите @BotFather');
-    console.log('3. Отправьте /newbot');
-    console.log('4. Скопируйте токен (пример: 6123456789:AAHdjTgmFhN6xUZzUZzUZzUZzUZzUZz)');
-    console.log('5. Вставьте в этот файл вместо ВАШ_ТОКЕН');
-    process.exit(1);
-}
-
-console.log('🚀 Запуск бота...');
-console.log('🌐 Web App URL:', WEB_APP_URL);
-
-// === БИБЛИОТЕКИ ===
-const TelegramBot = require('node-telegram-bot-api');
-const express = require('express');
-
-// === ИНИЦИАЛИЗАЦИЯ ===
-const bot = new TelegramBot(BOT_TOKEN, { polling: true });
-const app = express();
-const PORT = 3000;
-
-// === MINI APP (полная версия с анимациями) ===
-app.get('/', (req, res) => {
-    res.send(`
-    <!DOCTYPE html>
-    <html lang="ru">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>🎮 Discord Shop</title>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🪙 Luar Chack</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+        }
+        
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        p {
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+        
+        .feature {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .feature-icon {
+            font-size: 40px;
+            margin-bottom: 15px;
+        }
+        
+        .btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+            transition: transform 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🪙 Luar Chack</h1>
+        <p>Магазин L-Coin для вашего Discord сервера</p>
+        
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">💰</div>
+                <h3>Пополнение баланса</h3>
+                <p>Купите L-Coin для покупок на сервере</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <h3>Быстрая выдача</h3>
+                <p>Мгновенное зачисление после оплаты</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🛡️</div>
+                <h3>Безопасно</h3>
+                <p>Защищенные платежи через ЮMoney</p>
+            </div>
+        </div>
+        
+        <a href="/shop" class="btn">Открыть магазин</a>
+    </div>
+</body>
+</html>        <title>🎮 Discord Shop</title>
         <script src="https://telegram.org/js/telegram-web-app.js"></script>
         <style>
             * {
