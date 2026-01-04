@@ -5,43 +5,69 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 
+// ===== КОНФИГУРАЦИЯ =====
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const WEB_APP_URL = process.env.WEB_APP_URL;
-const ADMIN_ID = 1484129008; // ⚠️ ЗАМЕНИТЕ НА ВАШ ID
+const ADMIN_ID = 1484129008; // Твой ID установлен
 const PORT = process.env.PORT || 3000;
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 const db = new Database('database.db');
 const app = express();
 
-db.exec(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT, coins INTEGER DEFAULT 0, total_spent INTEGER DEFAULT 0)`);
+// База данных
+db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY,
+        username TEXT,
+        coins INTEGER DEFAULT 0,
+        total_spent INTEGER DEFAULT 0
+    )
+`);
 
+// Функция для логов
 function writeLog(text) {
     fs.appendFileSync('logs.txt', `[${new Date().toLocaleString()}] ${text}\n`);
 }
 
+// Команда /start
 bot.onText(/\/start/, (msg) => {
-    bot.sendMessage(msg.chat.id, `🔴 *LUAR SHOP — МАГАЗИН L-COIN*\n\n1 L-coin = 1 ₽\nРеквизиты внутри приложения.`, {
+    // Регистрируем юзера если его нет
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(msg.from.id);
+    if (!user) {
+        db.prepare("INSERT INTO users (id, username) VALUES (?, ?)").run(msg.from.id, msg.from.username || 'User');
+    }
+
+    bot.sendMessage(msg.chat.id, `🔴 *LUAR SHOP — L-COINS*\n\n1 L-coin = 1 ₽\nНажми кнопку, чтобы войти в магазин.`, {
         parse_mode: 'Markdown',
-        reply_markup: { inline_keyboard: [[{ text: "🔥 ВОЙТИ В МАГАЗИН", web_app: { url: WEB_APP_URL } }]] }
+        reply_markup: {
+            inline_keyboard: [[{ text: "🔥 МАГАЗИН И ПРОФИЛЬ", web_app: { url: WEB_APP_URL } }]]
+        }
     });
 });
 
+// ПРИЕМ ДАННЫХ ИЗ ПРИЛОЖЕНИЯ
 bot.on('web_app_data', (msg) => {
     try {
         const data = JSON.parse(msg.web_app_data.data);
+        
         if (data.action === 'pay_sbp') {
             const orderId = Math.floor(Math.random() * 90000) + 10000;
-            
-            // Сообщение пользователю
+
+            // Сообщение пользователю в чат
             bot.sendMessage(msg.chat.id, 
-                `📝 *ЗАКАЗ #${orderId} ОФОРМЛЕН*\n\n` +
+                `📝 *ЗАКАЗ #${orderId} ОТПРАВЛЕН*\n\n` +
                 `Сумма: *${data.price} ₽*\n` +
                 `Товар: *${data.amount} L-coins*\n\n` +
-                `⏳ Ожидайте подтверждения от админа.`, { parse_mode: 'Markdown' });
+                `⏳ Ожидайте, админ проверяет оплату.`, { parse_mode: 'Markdown' });
 
-            // Админу
-            bot.sendMessage(ADMIN_ID, `🚨 *НОВЫЙ ЧЕК ПРОВЕРКИ*\nЮзер: @${msg.from.username}\nID: \`${msg.from.id}\`\nСумма: ${data.price} ₽\nТовар: ${data.amount} L`, {
+            // Уведомление тебе (админу)
+            bot.sendMessage(ADMIN_ID, 
+                `🚨 *НОВЫЙ ЧЕК (#${orderId})*\n\n` +
+                `Юзер: @${msg.from.username || 'n/a'}\n` +
+                `ID: \`${msg.from.id}\`\n` +
+                `К оплате: *${data.price} ₽*\n` +
+                `Товар: *${data.amount} L*`, {
                 reply_markup: {
                     inline_keyboard: [
                         [{ text: "✅ ПОДТВЕРДИТЬ", callback_data: `confirm_${msg.from.id}_${data.amount}_${data.price}` }],
@@ -51,18 +77,26 @@ bot.on('web_app_data', (msg) => {
             });
             writeLog(`Заказ #${orderId} от ${msg.from.id}`);
         }
-    } catch (e) { console.log(e) }
+    } catch (e) {
+        console.error("Ошибка обработки данных:", e);
+    }
 });
 
+// Кнопка подтверждения у админа
 bot.on('callback_query', (query) => {
-    const [action, userId, amount, price] = query.data.split('_');
-    if (action === 'confirm' && query.from.id == ADMIN_ID) {
+    const parts = query.data.split('_');
+    if (parts[0] === 'confirm') {
+        const [_, userId, amount, price] = parts;
         db.prepare("UPDATE users SET coins = coins + ? WHERE id = ?").run(amount, userId);
-        bot.sendMessage(userId, `🚀 *ОПЛАТА ПРИНЯТА!*\nНачислено: +${amount} L-coins.`);
-        bot.answerCallbackQuery(query.id, { text: "Готово!" });
-        bot.deleteMessage(ADMIN_ID, query.message.message_id);
+        
+        bot.sendMessage(userId, `🚀 *ОПЛАТА ПОДТВЕРЖДЕНА!*\nБаланс пополнен на: +${amount} L-coins.`);
+        bot.answerCallbackQuery(query.id, { text: "Баланс пополнен!" });
+        bot.editMessageText(`✅ Выдано ${amount} L юзеру ${userId}`, {
+            chat_id: ADMIN_ID,
+            message_id: query.message.message_id
+        });
     }
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.listen(PORT, () => console.log(`Start on ${PORT}`));
+app.listen(PORT, () => console.log(`Бот запущен на порту ${PORT}`));
